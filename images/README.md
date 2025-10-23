@@ -25,22 +25,24 @@ These screenshots show the three chat applications **before** the @mention featu
 
 ## After @Mention Feature Implementation
 
-**NEW SCREENSHOTS NEEDED - Please take screenshots showing:**
+### Vanilla Chat (After) ✅
+![Vanilla Chat After](Vanilla_chat_with_mentions.png)
 
-### Features to Capture:
-1. ✅ **@mention in message text** - Should show blue highlight on @username
-2. ✅ **Mentioned message** - Should show yellow background when you're mentioned
-3. ✅ **"@ mentioned you" badge** - Orange badge in message header
-4. ✅ **Multiple @mentions** - Show message with multiple @usernames highlighted
+**Features Demonstrated:**
+1. ✅ **@mention highlighting** - `@B1` appears in blue boxes
+2. ✅ **Mentioned messages** - Yellow background on messages mentioning B1
+3. ✅ **"@ mentioned you" badge** - Orange badge with pulse animation
+4. ✅ **Multiple mentions** - Two different users (B2 and B3) mentioned B1
 
-### Suggested Test Flow:
-```
-User A (Vanilla): "@B2 hello there!"
-User B2 (React): Should see yellow highlight + badge
-User B2 (React): "@B1 thanks for the message @B3"
-User B1 (Angular): Should see yellow highlight + badge
-User B3 (Vanilla): Should see yellow highlight + badge
-```
+**What Changed:**
+- BEFORE: `@B1` was plain text, easy to miss
+- AFTER: `@B1` is blue, message is yellow, orange badge pulses - impossible to miss!
+
+### React Chat (After)
+_Screenshot coming soon..._
+
+### Angular Chat (After)
+_Screenshot coming soon..._
 
 ---
 

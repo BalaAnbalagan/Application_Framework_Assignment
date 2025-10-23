@@ -20,6 +20,7 @@ let username = null;
 let isConnected = false;
 let typingTimeout = null;
 let isTyping = false;
+let onlineUsers = []; // Store online users for autocomplete
 
 // ============================================================================
 // DOM REFERENCES - Manual element selection (Framework would handle this)
@@ -172,6 +173,9 @@ function enableInput() {
 }
 
 function updateUsersList(users) {
+    // Store users globally for autocomplete
+    onlineUsers = users;
+
     // Clear current list
     usersList.innerHTML = '';
 
@@ -224,11 +228,15 @@ function addSystemMessage(text) {
 
 function displayChatMessage(data) {
     // ========================================================================
-    // @MENTION FEATURE - Vanilla Implementation
-    // Detect @username mentions and highlight them
+    // @MENTION FEATURE + PRIVATE MESSAGES - Vanilla Implementation
+    // Detect @username mentions and handle private messages
     // ========================================================================
 
-    // Detect if current user is mentioned
+    // Check if this is a direct message
+    const isDirectMessage = data.isDirectMessage || false;
+    const isSender = data.sender === username;
+
+    // Detect if current user is mentioned (for non-DM messages)
     const mentionRegex = new RegExp(`@${username}\\b`, 'gi');
     const isMentioned = mentionRegex.test(data.text);
 
@@ -241,12 +249,17 @@ function displayChatMessage(data) {
     messageDiv.className = 'message';
 
     // Add 'own-message' class if it's from current user
-    if (data.sender === username) {
+    if (isSender) {
         messageDiv.classList.add('own-message');
     }
 
-    // Add 'mentioned' class if current user is mentioned
-    if (isMentioned && data.sender !== username) {
+    // Add 'direct-message' class if this is a DM
+    if (isDirectMessage) {
+        messageDiv.classList.add('direct-message');
+    }
+
+    // Add 'mentioned' class if current user is mentioned (non-DM)
+    if (isMentioned && !isSender && !isDirectMessage) {
         messageDiv.classList.add('mentioned');
     }
 
@@ -257,11 +270,22 @@ function displayChatMessage(data) {
     // Sender name
     const senderSpan = document.createElement('span');
     senderSpan.className = 'message-sender';
-    senderSpan.textContent = data.sender === username ? 'You' : data.sender;
+    senderSpan.textContent = isSender ? 'You' : data.sender;
     headerDiv.appendChild(senderSpan);
 
-    // Add mention badge if user is mentioned
-    if (isMentioned && data.sender !== username) {
+    // Add DM badge if this is a direct message
+    if (isDirectMessage) {
+        const dmBadge = document.createElement('span');
+        dmBadge.className = 'dm-badge';
+        if (isSender) {
+            dmBadge.textContent = `📩 Private to @${data.recipient}`;
+        } else {
+            dmBadge.textContent = `📩 Private message`;
+        }
+        headerDiv.appendChild(dmBadge);
+    }
+    // Add mention badge if user is mentioned (non-DM)
+    else if (isMentioned && !isSender) {
         const mentionBadge = document.createElement('span');
         mentionBadge.className = 'mention-badge';
         mentionBadge.textContent = '@ mentioned you';
@@ -283,7 +307,7 @@ function displayChatMessage(data) {
     if (mentions.length > 0) {
         let highlightedText = data.text;
         mentions.forEach(mention => {
-            const username = mention.substring(1); // Remove @
+            const mentionUser = mention.substring(1); // Remove @
             const highlightSpan = `<span class="mention-highlight">${mention}</span>`;
             highlightedText = highlightedText.replace(
                 new RegExp(mention, 'g'),

@@ -119,24 +119,57 @@ wss.on('connection', (ws) => {
   function handleMessage(message) {
     if (!clientId || !username) return;
 
+    // Check if message starts with @username for direct message
+    // Matches: @B1, @ B1, @B1 text, @ B1 text, @B1: text, @B1,text
+    const dmMatch = message.text.match(/^@\s*(\w+)[,:\s]*(.*)/);
+    const isDirectMessage = !!dmMatch;
+    const recipientUsername = dmMatch ? dmMatch[1] : null;
+    const actualText = dmMatch ? (dmMatch[2].trim() || message.text) : message.text;
+
     const chatMessage = {
       type: 'message',
       text: message.text,
       sender: username,
       clientId: clientId,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      isDirectMessage: isDirectMessage,
+      recipient: recipientUsername
     };
 
-    // Add to history (keep last 50)
-    messageHistory.push(chatMessage);
-    if (messageHistory.length > 50) {
-      messageHistory.shift();
+    if (isDirectMessage && recipientUsername) {
+      // Direct message - send only to sender and recipient
+      const recipient = findUserByUsername(recipientUsername);
+
+      if (recipient) {
+        console.log(`📩 DM from ${username} to ${recipientUsername}: ${actualText}`);
+
+        // Send to recipient
+        recipient.ws.send(JSON.stringify(chatMessage));
+
+        // Send back to sender (so they see what they sent)
+        ws.send(JSON.stringify(chatMessage));
+      } else {
+        // Recipient not found - send error back to sender
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: `User @${recipientUsername} not found`,
+          timestamp: new Date().toISOString()
+        }));
+        console.log(`⚠️  ${username} tried to DM non-existent user: ${recipientUsername}`);
+      }
+    } else {
+      // Regular broadcast message
+      console.log(`💬 ${username}: ${message.text}`);
+
+      // Add to history (keep last 50)
+      messageHistory.push(chatMessage);
+      if (messageHistory.length > 50) {
+        messageHistory.shift();
+      }
+
+      // Broadcast to all users
+      broadcast(chatMessage);
     }
-
-    console.log(`💬 ${username}: ${message.text}`);
-
-    // Broadcast to all users
-    broadcast(chatMessage);
 
     // Clear typing indicator
     const user = users.get(clientId);
@@ -144,6 +177,16 @@ wss.on('connection', (ws) => {
       user.isTyping = false;
       broadcastTypingIndicators();
     }
+  }
+
+  // Helper function to find user by username
+  function findUserByUsername(targetUsername) {
+    for (const [id, user] of users.entries()) {
+      if (user.username.toLowerCase() === targetUsername.toLowerCase()) {
+        return user;
+      }
+    }
+    return null;
   }
 
   // Handle typing indicator
