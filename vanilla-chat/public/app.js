@@ -223,6 +223,19 @@ function addSystemMessage(text) {
 }
 
 function displayChatMessage(data) {
+    // ========================================================================
+    // @MENTION FEATURE - Vanilla Implementation
+    // Detect @username mentions and highlight them
+    // ========================================================================
+
+    // Detect if current user is mentioned
+    const mentionRegex = new RegExp(`@${username}\\b`, 'gi');
+    const isMentioned = mentionRegex.test(data.text);
+
+    // Extract all mentions from message
+    const allMentionsRegex = /@(\w+)/g;
+    const mentions = data.text.match(allMentionsRegex) || [];
+
     // Create message container
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message';
@@ -230,6 +243,11 @@ function displayChatMessage(data) {
     // Add 'own-message' class if it's from current user
     if (data.sender === username) {
         messageDiv.classList.add('own-message');
+    }
+
+    // Add 'mentioned' class if current user is mentioned
+    if (isMentioned && data.sender !== username) {
+        messageDiv.classList.add('mentioned');
     }
 
     // Create message header
@@ -242,16 +260,40 @@ function displayChatMessage(data) {
     senderSpan.textContent = data.sender === username ? 'You' : data.sender;
     headerDiv.appendChild(senderSpan);
 
+    // Add mention badge if user is mentioned
+    if (isMentioned && data.sender !== username) {
+        const mentionBadge = document.createElement('span');
+        mentionBadge.className = 'mention-badge';
+        mentionBadge.textContent = '@ mentioned you';
+        headerDiv.appendChild(mentionBadge);
+    }
+
     // Timestamp
     const timeSpan = document.createElement('span');
     timeSpan.className = 'message-time';
     timeSpan.textContent = formatTime(data.timestamp);
     headerDiv.appendChild(timeSpan);
 
-    // Create message text
+    // Create message text with highlighted mentions
     const textDiv = document.createElement('div');
     textDiv.className = 'message-text';
-    textDiv.textContent = data.text;
+
+    // Manually replace @mentions with highlighted spans
+    // This is complex in vanilla - need to parse and create elements
+    if (mentions.length > 0) {
+        let highlightedText = data.text;
+        mentions.forEach(mention => {
+            const username = mention.substring(1); // Remove @
+            const highlightSpan = `<span class="mention-highlight">${mention}</span>`;
+            highlightedText = highlightedText.replace(
+                new RegExp(mention, 'g'),
+                highlightSpan
+            );
+        });
+        textDiv.innerHTML = highlightedText;
+    } else {
+        textDiv.textContent = data.text;
+    }
 
     // Assemble message
     messageDiv.appendChild(headerDiv);

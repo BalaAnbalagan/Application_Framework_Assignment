@@ -1,0 +1,242 @@
+/**
+ * REACT CHAT - MAIN APP COMPONENT
+ *
+ * NOTICE THE DIFFERENCES FROM VANILLA:
+ * 1. ✅ COMPONENT-BASED: UI is built from reusable components
+ * 2. ✅ DECLARATIVE: We describe WHAT we want, not HOW to build it
+ * 3. ✅ STATE MANAGEMENT: React hooks manage state automatically
+ * 4. ✅ REACTIVITY: UI auto-updates when state changes!
+ * 5. ✅ JSX: Write HTML-like syntax in JavaScript
+ *
+ * MVC ROLES IN REACT:
+ * - This component is primarily the CONTROLLER
+ * - It manages state (local Model)
+ * - It renders child components (View)
+ * - It handles user interactions (Controller)
+ */
+
+import React, { useState, useEffect, useRef } from 'react';
+import './App.css';
+import ChatMessage from './components/ChatMessage';
+import SystemMessage from './components/SystemMessage';
+import ConnectionStatus from './components/ConnectionStatus';
+
+function App() {
+  // =========================================================================
+  // STATE MANAGEMENT (Local Model)
+  // Notice: We use React hooks - no global variables like vanilla!
+  // When state changes, React automatically re-renders the UI!
+  // =========================================================================
+
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [websocket, setWebsocket] = useState(null);
+
+  // Ref for auto-scrolling (doesn't trigger re-renders)
+  const messagesEndRef = useRef(null);
+
+  // =========================================================================
+  // WEBSOCKET SETUP (Controller)
+  // useEffect runs when component mounts (like window.onload in vanilla)
+  // =========================================================================
+
+  useEffect(() => {
+    console.log('🚀 React Chat starting...');
+
+    // Connect to shared WebSocket server
+    const ws = new WebSocket('ws://localhost:3000');
+
+    ws.onopen = () => {
+      console.log('✅ Connected to WebSocket server');
+      setIsConnected(true); // React auto-updates UI when this changes!
+
+      // Send implementation info
+      ws.send(JSON.stringify({
+        implementation: 'react',
+        text: 'React chat user connected'
+      }));
+
+      // Add system message
+      addSystemMessage('Connected to chat server');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        // Add message to state
+        // React will automatically re-render with the new message!
+        if (data.type === 'system') {
+          addSystemMessage(data.message);
+        } else if (data.type === 'message') {
+          addChatMessage(data);
+        }
+      } catch (error) {
+        console.error('Error parsing message:', error);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('🔴 Disconnected from WebSocket server');
+      setIsConnected(false);
+      addSystemMessage('Disconnected from server');
+    };
+
+    ws.onerror = (error) => {
+      console.error('❌ WebSocket error:', error);
+      addSystemMessage('Connection error occurred');
+    };
+
+    setWebsocket(ws);
+
+    // Cleanup function - runs when component unmounts
+    return () => {
+      ws.close();
+    };
+  }, []); // Empty array means "run once on mount"
+
+  // =========================================================================
+  // AUTO-SCROLL EFFECT
+  // Notice: Much cleaner than vanilla's manual scrollToBottom()
+  // =========================================================================
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]); // Runs whenever messages change
+
+  // =========================================================================
+  // HELPER FUNCTIONS (Controller Logic)
+  // Notice: We update state, React handles the DOM updates!
+  // =========================================================================
+
+  const addSystemMessage = (text) => {
+    setMessages(prev => [...prev, {
+      type: 'system',
+      message: text,
+      timestamp: new Date().toISOString()
+    }]);
+  };
+
+  const addChatMessage = (data) => {
+    setMessages(prev => [...prev, {
+      type: 'message',
+      ...data
+    }]);
+  };
+
+  const sendMessage = () => {
+    const text = inputValue.trim();
+
+    if (!text) return;
+
+    if (!isConnected) {
+      alert('Not connected to server!');
+      return;
+    }
+
+    // Send message
+    websocket.send(JSON.stringify({
+      text: text,
+      sender: 'React User',
+      implementation: 'react',
+      timestamp: new Date().toISOString()
+    }));
+
+    // Clear input - React automatically updates the input field!
+    setInputValue('');
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  };
+
+  // =========================================================================
+  // RENDER (View)
+  // Notice: JSX is SO much cleaner than vanilla's createElement!
+  // We describe WHAT we want, not HOW to create it
+  // =========================================================================
+
+  return (
+    <div className="container">
+      <header>
+        <h1>⚛️ React Chat</h1>
+        <p className="subtitle">React.js Framework | Component-Based Architecture</p>
+
+        {/* Component usage - pass props, React handles rendering */}
+        <ConnectionStatus isConnected={isConnected} />
+      </header>
+
+      <div className="chat-container">
+        <div className="messages">
+          {/*
+            LOOK AT THIS!
+            In vanilla, we manually created DOM elements in a loop.
+            In React, we just MAP over data - React handles the DOM!
+          */}
+          {messages.map((msg, index) => (
+            msg.type === 'system'
+              ? <SystemMessage key={index} text={msg.message} />
+              : <ChatMessage key={index} data={msg} />
+          ))}
+
+          {/* Auto-scroll anchor */}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="input-container">
+          {/*
+            TWO-WAY DATA BINDING
+            value={inputValue} - React controls the input (controlled component)
+            onChange updates state - React re-renders automatically
+            In vanilla, we had to manually get/set values!
+          */}
+          <input
+            type="text"
+            placeholder="Type a message..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={!isConnected}
+            autoComplete="off"
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!isConnected}
+          >
+            Send
+          </button>
+        </div>
+      </div>
+
+      <footer>
+        <p>Open this in multiple tabs or alongside Vanilla/Angular implementations!</p>
+      </footer>
+    </div>
+  );
+}
+
+export default App;
+
+/**
+ * SUMMARY: WHAT REACT SOLVES (vs Vanilla)
+ *
+ * 1. ✅ NO MANUAL DOM: React handles createElement/appendChild
+ * 2. ✅ AUTOMATIC RE-RENDERING: Change state → UI updates automatically
+ * 3. ✅ COMPONENTS: Reusable UI pieces (ChatMessage, SystemMessage)
+ * 4. ✅ JSX: Write HTML in JavaScript - more readable
+ * 5. ✅ STATE MANAGEMENT: useState hook - no global variables
+ * 6. ✅ LIFECYCLE: useEffect hook - clean component lifecycle
+ * 7. ✅ DECLARATIVE: Describe UI, don't manipulate it
+ * 8. ✅ BETTER ORGANIZATION: Components in separate files
+ * 9. ✅ TYPE SAFETY: Can use TypeScript easily
+ * 10. ✅ PERFORMANCE: Virtual DOM optimizes updates
+ *
+ * TRADE-OFFS:
+ * ❌ MORE COMPLEX: Need to learn React concepts
+ * ❌ BIGGER BUNDLE: Framework adds size
+ * ❌ BUILD STEP: Need compilation (JSX → JS)
+ * ❌ DEPENDENCIES: Relies on React library
+ */

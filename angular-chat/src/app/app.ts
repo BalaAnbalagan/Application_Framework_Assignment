@@ -228,6 +228,37 @@ export class App implements OnInit, OnDestroy {
     });
   }
 
+  // ========================================================================
+  // @MENTION FEATURE - Angular Implementation
+  // TypeScript provides compile-time type safety!
+  // Notice how we return typed objects instead of raw strings
+  // ========================================================================
+
+  isMentioned(text: string | undefined): boolean {
+    if (!text) return false;
+    // Check if current user is mentioned
+    const mentionRegex = new RegExp(`@${this.username()}\\b`, 'gi');
+    return mentionRegex.test(text);
+  }
+
+  parseMentions(text: string): string[] {
+    // Extract all @mentions and return as array
+    const mentionRegex = /@(\w+)/g;
+    return text.match(mentionRegex) || [];
+  }
+
+  renderMessageText(text: string): {type: 'text' | 'mention', content: string}[] {
+    // Split text into parts for rendering with type safety
+    const parts = text.split(/(@\w+)/g);
+
+    return parts
+      .filter(part => part.length > 0)
+      .map(part => ({
+        type: part.match(/^@\w+$/) ? 'mention' as const : 'text' as const,
+        content: part
+      }));
+  }
+
   getTypingIndicator(): string | null {
     const currentUsername = this.username();
     const others = this.typingUsers().filter(u => u !== currentUsername);

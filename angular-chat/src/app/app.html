@@ -74,14 +74,25 @@
             *ngIf="msg.type === 'message'"
             class="message"
             [class.own-message]="isOwnMessage(msg)"
+            [class.mentioned]="isMentioned(msg.text) && !isOwnMessage(msg)"
           >
             <div class="message-header">
               <span class="message-sender">
                 {{ isOwnMessage(msg) ? 'You' : msg.sender }}
               </span>
+              <!-- @MENTION FEATURE: Show badge if mentioned -->
+              <span *ngIf="isMentioned(msg.text) && !isOwnMessage(msg)" class="mention-badge">
+                @ mentioned you
+              </span>
               <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
             </div>
-            <div class="message-text">{{ msg.text }}</div>
+            <!-- @MENTION FEATURE: Render text with highlighted mentions -->
+            <div class="message-text">
+              <ng-container *ngFor="let part of renderMessageText(msg.text || '')">
+                <span *ngIf="part.type === 'mention'" class="mention-highlight">{{ part.content }}</span>
+                <ng-container *ngIf="part.type === 'text'">{{ part.content }}</ng-container>
+              </ng-container>
+            </div>
           </div>
         </div>
       </div>
