@@ -74,14 +74,21 @@
             *ngIf="msg.type === 'message'"
             class="message"
             [class.own-message]="isOwnMessage(msg)"
-            [class.mentioned]="isMentioned(msg.text) && !isOwnMessage(msg)"
+            [class.mentioned]="isMentioned(msg.text) && !isOwnMessage(msg) && !isDirectMessage(msg)"
+            [class.direct-message]="isDirectMessage(msg)"
           >
             <div class="message-header">
               <span class="message-sender">
                 {{ isOwnMessage(msg) ? 'You' : msg.sender }}
               </span>
-              <!-- @MENTION FEATURE: Show badge if mentioned -->
-              <span *ngIf="isMentioned(msg.text) && !isOwnMessage(msg)" class="mention-badge">
+              <!-- PRIVATE MESSAGING: Show DM badge -->
+              <span *ngIf="isDirectMessage(msg)" class="dm-badge">
+                {{ isOwnMessage(msg)
+                   ? '📩 Private to @' + msg.recipient
+                   : '📩 Private message' }}
+              </span>
+              <!-- @MENTION FEATURE: Show badge if mentioned (not for DMs) -->
+              <span *ngIf="isMentioned(msg.text) && !isOwnMessage(msg) && !isDirectMessage(msg)" class="mention-badge">
                 @ mentioned you
               </span>
               <span class="message-time">{{ formatTime(msg.timestamp) }}</span>

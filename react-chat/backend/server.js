@@ -106,23 +106,59 @@ io.on('connection', (socket) => {
     const user = users.get(socket.id);
     if (!user) return;
 
+    // ====================================================================
+    // PRIVATE MESSAGING FEATURE - React Implementation
+    // Socket.io makes this MUCH easier than Vanilla!
+    // ====================================================================
+
+    // Check if message starts with @username for direct message
+    const dmMatch = data.text.match(/^@\s*(\w+)[,:\s]*(.*)/);
+    const isDirectMessage = !!dmMatch;
+    const recipientUsername = dmMatch ? dmMatch[1] : null;
+
     const message = {
       text: data.text,
       sender: user.username,
       socketId: socket.id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      isDirectMessage: isDirectMessage,
+      recipient: recipientUsername
     };
 
-    // Add to history
-    messageHistory.push(message);
-    if (messageHistory.length > 50) {
-      messageHistory.shift();
+    if (isDirectMessage && recipientUsername) {
+      // Find recipient by username
+      const recipient = Array.from(users.values()).find(
+        u => u.username.toLowerCase() === recipientUsername.toLowerCase()
+      );
+
+      if (recipient) {
+        console.log(`📩 DM from ${user.username} to ${recipientUsername}`);
+
+        // Socket.io magic: send to specific socket!
+        socket.to(recipient.socketId).emit('message', message);
+
+        // Send back to sender
+        socket.emit('message', message);
+      } else {
+        // User not found
+        socket.emit('error', {
+          message: `User @${recipientUsername} not found`
+        });
+        console.log(`⚠️  ${user.username} tried to DM non-existent user: ${recipientUsername}`);
+      }
+    } else {
+      // Regular broadcast message
+      console.log(`💬 ${user.username}: ${data.text}`);
+
+      // Add to history
+      messageHistory.push(message);
+      if (messageHistory.length > 50) {
+        messageHistory.shift();
+      }
+
+      // Broadcast to all
+      io.emit('message', message);
     }
-
-    console.log(`💬 ${user.username}: ${data.text}`);
-
-    // Broadcast to all
-    io.emit('message', message);
 
     // Clear typing indicator
     if (user.isTyping) {

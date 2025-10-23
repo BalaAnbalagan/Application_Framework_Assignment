@@ -25,6 +25,8 @@ interface ChatMessage {
   sender?: string;
   user_id?: string;
   timestamp: string;
+  isDirectMessage?: boolean;  // PM feature
+  recipient?: string;          // PM feature
 }
 
 interface User {
@@ -275,6 +277,14 @@ export class App implements OnInit, OnDestroy {
 
   isCurrentUser(user: User): boolean {
     return user.user_id === this.userId;
+  }
+
+  // ========================================================================
+  // PRIVATE MESSAGING FEATURE - Angular Implementation
+  // TypeScript ensures type safety for DM properties
+  // ========================================================================
+  isDirectMessage(msg: ChatMessage): boolean {
+    return msg.isDirectMessage === true && !!msg.recipient;
   }
 
   private scrollToBottom() {

@@ -108,31 +108,77 @@ def send_message():
     data = request.json
     user_id = data.get('user_id')
     text = data.get('text')
-    
+
     if not user_id or user_id not in users:
         return jsonify({'error': 'Invalid user'}), 400
-    
+
     username = users[user_id]['username']
-    
+
+    # ========================================================================
+    # PRIVATE MESSAGING FEATURE - Python/Flask Implementation
+    # Check if message starts with @username for direct message
+    # ========================================================================
+    import re
+    dm_match = re.match(r'^@\s*(\w+)[,:\s]*(.*)', text)
+    is_direct_message = dm_match is not None
+    recipient_username = dm_match.group(1) if dm_match else None
+
     message = {
         'id': message_id_counter,
         'type': 'message',
         'text': text,
         'sender': username,
         'user_id': user_id,
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        'isDirectMessage': is_direct_message,
+        'recipient': recipient_username
     }
-    
+
     message_id_counter += 1
-    
-    # Add to history
-    message_history.append(message)
-    if len(message_history) > 50:
-        message_history.pop(0)
-    
-    # Broadcast message
-    broadcast_message(message)
-    
+
+    if is_direct_message and recipient_username:
+        # Direct message - send only to sender and recipient
+        # Python approach: Find recipient by username using dict comprehension
+        recipient = next((u for uid, u in users.items()
+                         if u['username'].lower() == recipient_username.lower()), None)
+
+        if recipient:
+            print(f'📩 DM from {username} to {recipient_username}: {text}')
+
+            # Send to recipient's queue
+            try:
+                recipient['queue'].put(message)
+            except:
+                pass
+
+            # Send to sender's queue (echo back)
+            try:
+                users[user_id]['queue'].put(message)
+            except:
+                pass
+        else:
+            # Recipient not found - send error message to sender
+            error_msg = {
+                'type': 'system',
+                'message': f'User @{recipient_username} not found',
+                'timestamp': datetime.now().isoformat()
+            }
+            try:
+                users[user_id]['queue'].put(error_msg)
+            except:
+                pass
+    else:
+        # Regular broadcast message
+        # Add to history
+        message_history.append(message)
+        if len(message_history) > 50:
+            message_history.pop(0)
+
+        # Broadcast message
+        broadcast_message(message)
+
+        print(f'💬 {username}: {text}')
+
     # Clear typing indicator
     with users_lock:
         if user_id in users:
@@ -141,9 +187,7 @@ def send_message():
                 'type': 'typing_indicator',
                 'typing_users': get_typing_users()
             })
-    
-    print(f'💬 {username}: {text}')
-    
+
     return jsonify({'status': 'ok'})
 
 @app.route('/api/typing', methods=['POST'])

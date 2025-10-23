@@ -209,8 +209,12 @@ function App() {
         <div className="chat-container">
           <div className="messages">
             {messages.map((msg, idx) => {
-              // Check if current user is mentioned in this message
-              const mentioned = msg.type === 'message' && isMentioned(msg.text, username) && msg.sender !== username;
+              // ============================================================
+              // PRIVATE MESSAGING - React Implementation
+              // Check if this is a DM and whether to show mention badge
+              // ============================================================
+              const isDM = msg.isDirectMessage && msg.recipient;
+              const mentioned = msg.type === 'message' && !isDM && isMentioned(msg.text, username) && msg.sender !== username;
 
               return msg.type === 'system' ? (
                 <div key={idx} className="system-message">
@@ -219,12 +223,19 @@ function App() {
               ) : (
                 <div
                   key={idx}
-                  className={`message ${msg.sender === username ? 'own-message' : ''} ${mentioned ? 'mentioned' : ''}`}
+                  className={`message ${msg.sender === username ? 'own-message' : ''} ${mentioned ? 'mentioned' : ''} ${isDM ? 'direct-message' : ''}`}
                 >
                   <div className="message-header">
                     <span className="message-sender">
                       {msg.sender === username ? 'You' : msg.sender}
                     </span>
+                    {isDM && (
+                      <span className="dm-badge">
+                        {msg.sender === username
+                          ? `📩 Private to @${msg.recipient}`
+                          : '📩 Private message'}
+                      </span>
+                    )}
                     {mentioned && (
                       <span className="mention-badge">@ mentioned you</span>
                     )}

@@ -427,3 +427,27 @@ footer {
   border-radius: 4px;
   font-weight: 600;
 }
+
+/* ================================================================
+   PRIVATE MESSAGING FEATURE STYLES - React Implementation
+   JSX makes conditional rendering SO MUCH EASIER than Vanilla!
+   ================================================================ */
+
+/* Direct message styling - different from public mentions (purple theme) */
+.message.direct-message .message-text {
+  background: #f3e8ff !important;
+  border-left-color: #a855f7 !important;
+  font-weight: 500;
+}
+
+/* DM badge in header - purple to distinguish from yellow @mention badge */
+.dm-badge {
+  background: #a855f7;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  margin-left: 8px;
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
