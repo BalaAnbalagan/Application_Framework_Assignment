@@ -1,0 +1,332 @@
+/**
+ * VANILLA CHAT - FRONTEND LOGIC (Controller + some View logic)
+ *
+ * This file handles EVERYTHING in vanilla JavaScript.
+ * Notice how much manual work is required!
+ *
+ * MVC ROLES IN THIS FILE:
+ * - Controller: Handles user input, WebSocket communication
+ * - View Logic: Manual DOM manipulation to update UI
+ * - Local Model: Stores connection state
+ *
+ * PROBLEMS YOU'LL EXPERIENCE:
+ * 1. MANUAL DOM MANIPULATION: We use getElementById, createElement, appendChild everywhere
+ * 2. NO REACTIVITY: When data changes, we manually update the UI
+ * 3. NO STATE MANAGEMENT: We track state in global variables (messy!)
+ * 4. NO COMPONENT REUSABILITY: Want a reusable message component? Copy-paste code!
+ * 5. MIXING CONCERNS: Logic and DOM manipulation are intertwined
+ * 6. ERROR-PRONE: Typos in element IDs cause runtime errors
+ * 7. HARD TO TEST: Tightly coupled to DOM
+ * 8. NO MODULE SYSTEM: Everything is global (in this simple version)
+ * 9. NO BUILD TOOLS: No transpiling, no bundling, no optimization
+ */
+
+// ============================================================================
+// GLOBAL STATE (Model-ish)
+// Problem: Global variables are bad practice, but we have no state management!
+// ============================================================================
+let websocket = null;
+let isConnected = false;
+let messageHistory = []; // We have to manually track messages
+
+// ============================================================================
+// DOM ELEMENT REFERENCES (View)
+// Problem: We have to manually grab each element - frameworks do this for us!
+// ============================================================================
+const messagesContainer = document.getElementById('messages');
+const messageInput = document.getElementById('message-input');
+const sendButton = document.getElementById('send-button');
+const connectionStatus = document.getElementById('connection-status');
+
+// ============================================================================
+// WEBSOCKET SETUP (Controller)
+// ============================================================================
+
+/**
+ * Initialize WebSocket connection
+ * Problem: We write all connection logic from scratch
+ */
+function connectWebSocket() {
+    // Connect to shared WebSocket server
+    websocket = new WebSocket('ws://localhost:3000');
+
+    // Handle connection opened
+    websocket.onopen = function(event) {
+        console.log('✅ Connected to WebSocket server');
+        isConnected = true;
+
+        // Manually update UI
+        updateConnectionStatus(true);
+        enableInput();
+
+        // Clear initial message
+        messagesContainer.innerHTML = '';
+
+        // Send implementation info
+        websocket.send(JSON.stringify({
+            implementation: 'vanilla',
+            text: 'Vanilla chat user connected'
+        }));
+    };
+
+    // Handle incoming messages
+    websocket.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+
+            // Add to our manual message history
+            messageHistory.push(data);
+
+            // Manually update the DOM
+            displayMessage(data);
+
+        } catch (error) {
+            console.error('Error parsing message:', error);
+        }
+    };
+
+    // Handle connection closed
+    websocket.onclose = function(event) {
+        console.log('🔴 Disconnected from WebSocket server');
+        isConnected = false;
+
+        // Manually update UI
+        updateConnectionStatus(false);
+        disableInput();
+
+        // Show disconnection message
+        addSystemMessage('Disconnected from server. Refresh to reconnect.');
+    };
+
+    // Handle errors
+    websocket.onerror = function(error) {
+        console.error('❌ WebSocket error:', error);
+        addSystemMessage('Connection error occurred.');
+    };
+}
+
+// ============================================================================
+// UI UPDATE FUNCTIONS (View Logic)
+// Problem: We manually manipulate DOM - frameworks auto-update when data changes!
+// ============================================================================
+
+/**
+ * Update connection status indicator
+ * Problem: Manual DOM manipulation for every UI change
+ */
+function updateConnectionStatus(connected) {
+    if (connected) {
+        connectionStatus.textContent = 'Connected';
+        connectionStatus.className = 'status connected';
+    } else {
+        connectionStatus.textContent = 'Disconnected';
+        connectionStatus.className = 'status disconnected';
+    }
+}
+
+/**
+ * Enable message input when connected
+ */
+function enableInput() {
+    messageInput.disabled = false;
+    sendButton.disabled = false;
+    messageInput.focus();
+}
+
+/**
+ * Disable message input when disconnected
+ */
+function disableInput() {
+    messageInput.disabled = true;
+    sendButton.disabled = true;
+}
+
+/**
+ * Display a message in the chat
+ * Problem: Look at all this manual DOM creation! Frameworks use templates!
+ */
+function displayMessage(data) {
+    if (data.type === 'system') {
+        addSystemMessage(data.message);
+    } else if (data.type === 'message') {
+        addChatMessage(data);
+    }
+
+    // Manually scroll to bottom
+    // Problem: We have to remember to do this - frameworks can handle it
+    scrollToBottom();
+}
+
+/**
+ * Add a system message
+ * Problem: Creating DOM elements manually is verbose and error-prone
+ */
+function addSystemMessage(text) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'system-message';
+    messageDiv.textContent = text;
+
+    messagesContainer.appendChild(messageDiv);
+}
+
+/**
+ * Add a chat message
+ * Problem: So much code just to display one message!
+ * Frameworks let you write a template once and reuse it.
+ */
+function addChatMessage(data) {
+    // Create main message container
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message';
+
+    // Create message header
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'message-header';
+
+    // Sender name
+    const senderSpan = document.createElement('span');
+    senderSpan.className = 'message-sender';
+    senderSpan.textContent = data.sender || 'Anonymous';
+
+    // Implementation badge
+    const implSpan = document.createElement('span');
+    implSpan.className = 'message-impl';
+    implSpan.textContent = data.implementation || 'unknown';
+
+    // Timestamp
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'message-time';
+    timeSpan.textContent = formatTime(data.timestamp);
+
+    // Assemble header
+    headerDiv.appendChild(senderSpan);
+    headerDiv.appendChild(implSpan);
+
+    // Add mention badge if this is a @mention
+    if (data.mentionedImplementation) {
+        const mentionSpan = document.createElement('span');
+        mentionSpan.className = 'mention-badge';
+        mentionSpan.textContent = `@${data.mentionedImplementation}`;
+        headerDiv.appendChild(mentionSpan);
+    }
+
+    headerDiv.appendChild(timeSpan);
+
+    // Create message text
+    const textDiv = document.createElement('div');
+    textDiv.className = 'message-text';
+    // Add mention class if this is a @mention
+    if (data.mentionedImplementation) {
+        textDiv.className += ' mention';
+    }
+    textDiv.textContent = data.text;
+
+    // Assemble message
+    messageDiv.appendChild(headerDiv);
+    messageDiv.appendChild(textDiv);
+
+    // Add to container
+    messagesContainer.appendChild(messageDiv);
+
+    // Problem: Compare this with React/Vue - they use simple templates!
+}
+
+/**
+ * Scroll messages to bottom
+ */
+function scrollToBottom() {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+/**
+ * Format timestamp for display
+ */
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// ============================================================================
+// USER INPUT HANDLING (Controller)
+// ============================================================================
+
+/**
+ * Send a message
+ * Problem: We manually handle everything - validation, sending, clearing input
+ */
+function sendMessage() {
+    const text = messageInput.value.trim();
+
+    // Validate
+    if (!text) {
+        return;
+    }
+
+    if (!isConnected) {
+        alert('Not connected to server!');
+        return;
+    }
+
+    // Create message object
+    const message = {
+        text: text,
+        sender: 'Vanilla User',
+        implementation: 'vanilla',
+        timestamp: new Date().toISOString()
+    };
+
+    // Send to server
+    websocket.send(JSON.stringify(message));
+
+    // Clear input
+    messageInput.value = '';
+    messageInput.focus();
+}
+
+// ============================================================================
+// EVENT LISTENERS (Controller)
+// Problem: We manually attach all event listeners
+// Frameworks have declarative event binding in templates
+// ============================================================================
+
+// Send button click
+sendButton.addEventListener('click', sendMessage);
+
+// Enter key in input
+messageInput.addEventListener('keypress', function(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+    }
+});
+
+// ============================================================================
+// INITIALIZATION
+// Problem: We manually control the initialization flow
+// ============================================================================
+
+// Connect when page loads
+window.addEventListener('load', function() {
+    console.log('🚀 Vanilla Chat starting...');
+    addSystemMessage('Connecting to server...');
+    connectWebSocket();
+});
+
+// ============================================================================
+// SUMMARY OF PROBLEMS WITH VANILLA APPROACH:
+//
+// 1. ❌ VERBOSE: So much code for simple tasks
+// 2. ❌ MANUAL DOM: Creating/updating elements by hand
+// 3. ❌ NO REACTIVITY: Data changes don't auto-update UI
+// 4. ❌ GLOBAL STATE: Hard to manage and track
+// 5. ❌ NOT REUSABLE: Can't easily reuse components
+// 6. ❌ HARD TO TEST: Tightly coupled to DOM
+// 7. ❌ ERROR-PRONE: Easy to make mistakes with IDs/classes
+// 8. ❌ NO ORGANIZATION: Everything in one file
+// 9. ❌ NO TYPE CHECKING: Easy to make type errors
+// 10. ❌ PERFORMANCE: We don't optimize DOM updates
+//
+// Frameworks solve these problems! Let's see how in React and Vue...
+// ============================================================================

@@ -1,0 +1,154 @@
+<!--
+  ANGULAR CHAT TEMPLATE - EventSource + HTTP
+
+  NOTICE ANGULAR TEMPLATE SYNTAX:
+  1. *ngFor - Structural directive for loops
+  2. *ngIf - Conditional rendering
+  3. [(ngModel)] - Two-way data binding
+  4. (click), (keypress) - Event binding
+  5. [disabled] - Property binding
+  6. {{ }} - Interpolation with signals
+  7. () - Signal values accessed with ()
+-->
+
+<!-- Username Modal -->
+<div *ngIf="!hasJoined()" class="modal">
+  <div class="modal-content">
+    <h2>🅰️ Welcome to Angular Chat</h2>
+    <p>Angular Framework | Flask + SSE Protocol</p>
+    <input
+      id="username-input"
+      type="text"
+      placeholder="Enter your name..."
+      [(ngModel)]="username"
+      (keypress)="onUsernameEnter($event)"
+      maxlength="20"
+      autocomplete="off"
+    />
+    <button (click)="joinChat()">Join Chat</button>
+  </div>
+</div>
+
+<!-- Main Chat Interface -->
+<div *ngIf="hasJoined()" class="container">
+  <header>
+    <h1>🅰️ Angular Chat</h1>
+    <p class="subtitle">Angular + TypeScript | Flask (Python) + Server-Sent Events</p>
+    <div
+      class="status"
+      [class.connected]="isConnected()"
+      [class.disconnected]="!isConnected()"
+    >
+      {{ isConnected() ? 'Connected' : 'Disconnected' }}
+    </div>
+  </header>
+
+  <div class="chat-layout">
+    <!-- Sidebar - Online Users -->
+    <aside class="sidebar">
+      <h3>Online Users</h3>
+      <div class="users-list">
+        <div
+          *ngFor="let user of onlineUsers()"
+          class="user-item"
+          [class.you]="isCurrentUser(user)"
+        >
+          {{ isCurrentUser(user) ? user.username + ' (you)' : user.username }}
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <div class="chat-container">
+      <div class="messages">
+        <!-- Loop through messages -->
+        <div *ngFor="let msg of messages(); let i = index">
+
+          <!-- System message -->
+          <div *ngIf="msg.type === 'system'" class="system-message">
+            {{ msg.message }}
+          </div>
+
+          <!-- Chat message -->
+          <div
+            *ngIf="msg.type === 'message'"
+            class="message"
+            [class.own-message]="isOwnMessage(msg)"
+          >
+            <div class="message-header">
+              <span class="message-sender">
+                {{ isOwnMessage(msg) ? 'You' : msg.sender }}
+              </span>
+              <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
+            </div>
+            <div class="message-text">{{ msg.text }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div *ngIf="getTypingIndicator()" class="typing-indicator">
+        {{ getTypingIndicator() }}
+      </div>
+
+      <!-- Input Container -->
+      <div class="input-container">
+        <input
+          type="text"
+          placeholder="Type a message..."
+          [ngModel]="inputValue()"
+          (ngModelChange)="onInputChange($event)"
+          (keypress)="onEnterPress($event)"
+          [disabled]="!isConnected()"
+          autocomplete="off"
+        />
+        <button
+          (click)="sendMessage()"
+          [disabled]="!isConnected()"
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Backend: Flask (Python) + Server-Sent Events | Open multiple tabs!</p>
+  </footer>
+</div>
+
+<!--
+  KEY ANGULAR FEATURES DEMONSTRATED:
+
+  1. SIGNALS: username(), hasJoined(), messages(), etc.
+     - Reactive primitive introduced in Angular 17
+     - Auto-updates when values change
+     - Better performance than observables for simple state
+
+  2. TWO-WAY BINDING: [(ngModel)]
+     - Input syncs with component state
+     - Angular's "banana in a box" syntax
+
+  3. STRUCTURAL DIRECTIVES: *ngIf, *ngFor
+     - *ngIf: Conditional rendering
+     - *ngFor: Loop through arrays
+
+  4. PROPERTY BINDING: [class.connected], [disabled]
+     - Square brackets bind to element properties
+     - Dynamic CSS classes
+
+  5. EVENT BINDING: (click), (keypress)
+     - Parentheses for events
+     - Call component methods
+
+  COMPARE TO REACT:
+  - React uses JSX (JavaScript mixed with HTML)
+  - Angular uses Templates (HTML with directives)
+  - React: {messages.map(msg => <div>...)}
+  - Angular: *ngFor="let msg of messages()"
+
+  COMPARE TO VANILLA:
+  - No manual DOM manipulation!
+  - No createElement, appendChild
+  - Declarative, not imperative
+-->

@@ -1,0 +1,22 @@
+/**
+ * ANGULAR GLOBAL STYLES
+ *
+ * Angular encourages component-scoped CSS (app.css)
+ * But global styles go here
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}

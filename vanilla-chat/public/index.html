@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanilla Chat - No Framework</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Username Modal - Shows first -->
+    <div id="username-modal" class="modal">
+        <div class="modal-content">
+            <h2>💬 Welcome to Vanilla Chat</h2>
+            <p>No Framework | Pure HTML, CSS, JavaScript</p>
+            <input
+                type="text"
+                id="username-input"
+                placeholder="Enter your name..."
+                maxlength="20"
+                autocomplete="off"
+            />
+            <button id="join-button">Join Chat</button>
+        </div>
+    </div>
+
+    <!-- Main Chat Interface - Hidden until joined -->
+    <div id="chat-app" class="container" style="display: none;">
+        <header>
+            <h1>💬 Vanilla Chat</h1>
+            <p class="subtitle">No Framework | Pure HTML, CSS, JavaScript | Raw WebSocket</p>
+            <div id="connection-status" class="status disconnected">Connecting...</div>
+        </header>
+
+        <div class="chat-layout">
+            <!-- Sidebar with online users -->
+            <aside class="sidebar">
+                <h3>Online Users</h3>
+                <div id="users-list"></div>
+            </aside>
+
+            <!-- Main chat area -->
+            <div class="chat-container">
+                <div id="messages" class="messages">
+                    <!-- Messages appear here -->
+                </div>
+
+                <!-- Typing indicator -->
+                <div id="typing-indicator" class="typing-indicator" style="display: none;">
+                    <span id="typing-text"></span>
+                </div>
+
+                <div class="input-container">
+                    <input
+                        type="text"
+                        id="message-input"
+                        placeholder="Type a message..."
+                        autocomplete="off"
+                        disabled
+                    />
+                    <button id="send-button" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Backend: Plain Node.js + Raw WebSocket | Open multiple tabs to chat!</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

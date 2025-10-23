@@ -1,0 +1,203 @@
+/**
+ * ANGULAR CHAT - MAIN APP COMPONENT
+ *
+ * NOTICE THE ANGULAR DIFFERENCES:
+ * 1. ✅ TypeScript - Type safety built-in (not optional like React)
+ * 2. ✅ Decorators - @Component, @Injectable (metadata-driven)
+ * 3. ✅ Dependency Injection - Services injected automatically
+ * 4. ✅ Signals - New reactive primitive (Angular 16+)
+ * 5. ✅ Template Syntax - HTML with Angular directives
+ * 6. ✅ Opinionated - Angular tells you HOW to structure
+ *
+ * MVC ROLES IN ANGULAR:
+ * - Component = Controller (handles logic)
+ * - Template = View (HTML file)
+ * - Services = Model (data & business logic)
+ * - Clear separation of concerns!
+ */
+
+import { Component, OnInit, OnDestroy, signal, effect } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+
+// Interface for type safety - TypeScript!
+interface ChatMessage {
+  type: string;
+  text?: string;
+  message?: string;
+  sender?: string;
+  implementation?: string;
+  mentionedImplementation?: string;
+  timestamp: string;
+}
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './app.html',
+  styleUrl: './app.css'
+})
+export class App implements OnInit, OnDestroy {
+  // =========================================================================
+  // SIGNALS - Angular's Reactive State Management
+  // Signals auto-update the template when changed!
+  // Compare to React's useState - but more powerful
+  // =========================================================================
+
+  messages = signal<ChatMessage[]>([]);
+  inputValue = signal<string>('');
+  isConnected = signal<boolean>(false);
+
+  private websocket: WebSocket | null = null;
+
+  // =========================================================================
+  // LIFECYCLE HOOKS (Controller)
+  // Angular has explicit lifecycle - very structured!
+  // ngOnInit = componentDidMount in React
+  // ngOnDestroy = cleanup in useEffect
+  // =========================================================================
+
+  ngOnInit(): void {
+    console.log('🚀 Angular Chat starting...');
+    this.connectWebSocket();
+  }
+
+  ngOnDestroy(): void {
+    console.log('🛑 Angular Chat closing...');
+    this.websocket?.close();
+  }
+
+  // =========================================================================
+  // WEBSOCKET CONNECTION (Controller Logic)
+  // =========================================================================
+
+  private connectWebSocket(): void {
+    this.websocket = new WebSocket('ws://localhost:3000');
+
+    this.websocket.onopen = () => {
+      console.log('✅ Connected to WebSocket server');
+
+      // Update signal - Angular auto-updates template!
+      this.isConnected.set(true);
+
+      // Send implementation info
+      this.websocket?.send(JSON.stringify({
+        implementation: 'angular',
+        text: 'Angular chat user connected'
+      }));
+
+      this.addSystemMessage('Connected to chat server');
+    };
+
+    this.websocket.onmessage = (event) => {
+      try {
+        const data: ChatMessage = JSON.parse(event.data);
+
+        if (data.type === 'system') {
+          this.addSystemMessage(data.message || '');
+        } else if (data.type === 'message') {
+          this.addChatMessage(data);
+        }
+      } catch (error) {
+        console.error('Error parsing message:', error);
+      }
+    };
+
+    this.websocket.onclose = () => {
+      console.log('🔴 Disconnected from WebSocket server');
+      this.isConnected.set(false);
+      this.addSystemMessage('Disconnected from server');
+    };
+
+    this.websocket.onerror = (error) => {
+      console.error('❌ WebSocket error:', error);
+      this.addSystemMessage('Connection error occurred');
+    };
+  }
+
+  // =========================================================================
+  // MESSAGE MANAGEMENT (Controller Logic)
+  // Notice: We update signals, Angular handles the view!
+  // =========================================================================
+
+  private addSystemMessage(text: string): void {
+    this.messages.update(msgs => [...msgs, {
+      type: 'system',
+      message: text,
+      timestamp: new Date().toISOString()
+    }]);
+  }
+
+  private addChatMessage(data: ChatMessage): void {
+    this.messages.update(msgs => [...msgs, data]);
+  }
+
+  // =========================================================================
+  // USER ACTIONS (Controller - called from template)
+  // These are public methods called from the HTML template
+  // =========================================================================
+
+  sendMessage(): void {
+    const text = this.inputValue().trim();
+
+    if (!text) return;
+
+    if (!this.isConnected()) {
+      alert('Not connected to server!');
+      return;
+    }
+
+    // Send message
+    this.websocket?.send(JSON.stringify({
+      text: text,
+      sender: 'Angular User',
+      implementation: 'angular',
+      timestamp: new Date().toISOString()
+    }));
+
+    // Clear input - signal updates template automatically!
+    this.inputValue.set('');
+  }
+
+  onKeyPress(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      this.sendMessage();
+    }
+  }
+
+  // =========================================================================
+  // HELPER METHODS (View Logic)
+  // Used in the template for formatting
+  // =========================================================================
+
+  formatTime(timestamp: string): string {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+}
+
+/**
+ * SUMMARY: WHAT ANGULAR PROVIDES (vs React & Vanilla)
+ *
+ * 1. ✅ TYPESCRIPT FIRST: Strong typing built-in
+ * 2. ✅ DEPENDENCY INJECTION: Professional architecture pattern
+ * 3. ✅ OPINIONATED STRUCTURE: Clear way to organize code
+ * 4. ✅ SIGNALS: Powerful reactive state management
+ * 5. ✅ DECORATORS: Metadata-driven programming
+ * 6. ✅ CLEAR SEPARATION: Component (logic) + Template (view) + Service (model)
+ * 7. ✅ LIFECYCLE HOOKS: Explicit component lifecycle
+ * 8. ✅ BUILT-IN FEATURES: Forms, HTTP, routing all included
+ * 9. ✅ ENTERPRISE READY: Made for large applications
+ * 10. ✅ CLI TOOLS: Powerful code generation
+ *
+ * TRADE-OFFS (vs React):
+ * ❌ STEEPER LEARNING CURVE: More concepts to learn
+ * ❌ MORE VERBOSE: More boilerplate code
+ * ❌ BIGGER BUNDLE: Framework is larger
+ * ❌ LESS FLEXIBLE: Opinionated = less freedom
+ * ✅ BUT: Better for large teams, enterprise apps
+ */
